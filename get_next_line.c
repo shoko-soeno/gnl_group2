@@ -6,7 +6,7 @@
 /*   By: ssoeno <ssoeno@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/05/14 20:02:36 by ssoeno            #+#    #+#             */
-/*   Updated: 2024/05/17 18:41:00 by ssoeno           ###   ########.fr       */
+/*   Updated: 2024/05/18 13:34:26 by ssoeno           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,13 +28,11 @@ static bool	pack(char **basin, char *cup)
 		*basin = ft_substr(cup, 0, ft_strlen(cup));
 	else
 	{
-		bk = *basin; //ft_strjoin(*basin, s) が新しいメモリ領域を確保
-		//*basin と s を連結した新しい文字列をその領域に格納
-		//*basin はこの新しいメモリアドレスに更新される。
-		*basin = ft_strjoin(*basin, cup); //basinのnull終端の後ろに連結していく
-		free(bk); //旧アドレスをfree
+		bk = *basin;
+		*basin = ft_strjoin(*basin, cup);
+		free(bk);
 	}
-	return (*basin != NULL); //メモリ確保に成功したか
+	return (*basin != NULL);
 }
 
 static bool	read_from_file(char **basin, int fd)
@@ -53,7 +51,7 @@ static bool	read_from_file(char **basin, int fd)
 		cup[rv] = '\0';
 		if (!(pack(basin, cup))) //packが失敗
 			return (false);
-		if (rv < BUFFER_SIZE);
+		if (rv < BUFFER_SIZE)
 			break; //fileの終わりに到達
 	}
 	return (true);
@@ -67,44 +65,62 @@ static char	*extract_line(char **basin)
 	char	*basin_bk;
 	char	*line;
 
+	if (!basin || !*basin)  // ポインタがNULLでないことを確認
+		return NULL;
 	p_endl = ft_strchr(*basin, '\n');
-	p_nl = *basin + ft_strlen(*basin);
-	basin_bk = *basin; //basinのアドレスを一時保存
-	*basin = NULL; //元のデータを指していたポインタを一時的にNULLに設定
-	//新しいデータ（新しい行の開始位置）を *basinに割り当てる準備
-	//誤って旧データにアクセスしてしまうのを防ぐ。
-	if (!p_endl || p_endl + 1 == p_nl) //改行がない（EOF）or 改行の次がヌル終端
-		line_length = p_endl - basin + 1;
+	if (p_endl)
+		line_length = p_endl - *basin + 1;
 	else
-		line_length = ft_strlen(basin);
+		line_length = ft_strlen(*basin);
 	line = (char *)malloc((line_length + 1) * sizeof(char));
-	if (line == NULL)
-		return (NULL);
-	ft_strlcpy(line, basin, line_length + 1);
-	if (line == NULL || *basin)
 	line[line_length] = '\0';
-	return (free(basin_bk), line);
+	if (!line)
+		return (NULL);
+	ft_strlcpy(line, *basin, line_length + 1);
+	if (p_endl)
+	{
+		if (*(p_endl + 1) == '\0')
+			*basin = NULL; //改行の後に文字がなければNULLを設定
+		else
+			*basin = p_endl + 1; //改行の後に文字があればその開始位置を設定
+	}
+	else
+	{
+		*basin = NULL;//改行がなければNULLを設定
+	}
+	
+	return (line);
 }
 
-static bool	*obtain_remaining(char **basin, char *cup)
-{
-	char	*endl;
-	char	*remaining;
-	int		remaining_length;
+// static char	*extract_line(char **p_store)
+// {
+// 	char	*p_nl; //*p_store 内の最初の改行文字の位置を指す
+// 	char	*p_end; //*p_store が指す文字列の末尾（ヌル文字の前）を指す
+// 	char	*origin;
+// 	char	*line;
 
-	endl = ft_strchr(basin, '\n');
-	if (!endl)
-		return (free(basin), NULL);
-	remaining_length = ft_strlen(endl + 1);
-	if (remaining_length == 0)
-		return (free(basin), NULL);
-	remaining = (char *)malloc((remaining_length + 1) * sizeof(char));
-	if (remaining == NULL)
-		return (free(basin), NULL);
-	ft_strlcpy(remaining, endl + 1, remaining_length + 1);
-	remaining[endl] ='\0';
-	return (*basin != NULL);
-}
+// 	p_nl = ft_strchr(*p_store, '\n');
+// 	p_end = *p_store + ft_strlen(*p_store);
+// 	//文字列の最後（ヌル文字の直前）を指すポインタを p_end に格納
+// 	origin = *p_store;
+// 	*p_store = NULL;
+// 	if (p_nl == NULL || p_nl + 1 == p_end)
+// 	//改行が見つからない場合、または改行が文字列の最後にある場合（改行の直後にヌル文字がくる場合）
+// 		line = ft_substr(origin, 0, p_end - origin);//*p_store の全内容を line にコピー
+// 	else
+// 	{
+// 		line = ft_substr(origin, 0, p_nl - origin + 1);//改行を含む行を抽出
+// 		*p_store = ft_substr(origin, p_nl - origin + 1, p_end - p_nl);
+// 		//改行の次の文字から文字列の終わりまでを新たな *p_store として設定
+// 		if (line == NULL || *p_store == NULL)
+// 		{
+// 			nullize_free(&line);
+// 			nullize_free(p_store);
+// 		}
+// 	}
+// 	free(origin);
+// 	return (line);
+// }
 
 char	*get_next_line(int fd)
 {
@@ -116,53 +132,36 @@ char	*get_next_line(int fd)
 	return (extract_line(&static_basin));
 }
 
-// #include <stdio.h>
-// #include <fcntl.h>
-// __attribute__((destructor))
-// static void destructor() {
-//     system("leaks -q a.out");
-// }
-// int main(int ac, char **av)
-// {
-// 	int     fd;
-// 	char    *next_line;
-// 	int     count;
-// 	(void)ac;
-// 	count = 0;
-// 	fd = open(av[1], O_RDONLY);
-// 	if (fd == -1)
-// 	{
-// 		printf("%s", "Error opening file");
-// 		return (1);
-// 	}
-// 	while (1)
-// 	{
-// 		next_line = get_next_line(fd);
-// 		if (next_line == NULL)
-// 			break ;
-// 		count++;
-// 		printf("[%d]:%s", count, next_line);
-// 		free(next_line);
-// 	close(fd);
-// 		next_line = NULL;
-// 	}
-// 	fd = open(av[1], O_RDONLY);
-// 	if (fd == -1)
-// 	{
-// 		printf("%s", "Error opening file");
-// 		return (1);
-// 	}
-// 	while (1)
-// 	{
-// 		next_line = get_next_line(fd);
-// 		if (next_line == NULL)
-// 			break ;
-// 		count++;
-// 		printf("[%d]:%s", count, next_line);
-// 		free(next_line);
-// 		next_line = NULL;
-// 	}
-// 	close(fd);
-// 	// system("leaks a.out");
-// 	return (0);
-// }
+#include <stdio.h>
+#include <fcntl.h>
+__attribute__((destructor))
+static void destructor() {
+	system("leaks -q a.out");
+}
+int main()
+{
+	int     fd;
+	char    *next_line;
+	int     count;
+
+	count = 0;
+	fd = open("example.txt", O_RDONLY);
+	if (fd == -1)
+	{
+		printf("%s", "Error opening file");
+		return (1);
+	}
+	while (1)
+	{
+		next_line = get_next_line(fd);
+		if (next_line == NULL)
+			break ;
+		count++;
+		printf("[%d]:%s\n", count, next_line);
+		free(next_line);
+		next_line = NULL;
+	}
+	close(fd);
+	// system("leaks a.out");
+	return (0);
+}

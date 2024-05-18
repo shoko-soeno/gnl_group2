@@ -6,7 +6,7 @@
 /*   By: ssoeno <ssoeno@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/29 19:16:13 by ssoeno            #+#    #+#             */
-/*   Updated: 2024/05/17 18:13:06 by ssoeno           ###   ########.fr       */
+/*   Updated: 2024/05/18 14:53:51 by ssoeno           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,26 +42,50 @@ char	*ft_strchr(const char *s, int c)
 	return ((char *)s);
 }
 
-static void	*ft_memmove(void *dst, const void *src, size_t len)
-{
-	unsigned char		*c_dst;
-	const unsigned char	*c_src;
-	char				sign;
-	size_t				cur;
+// static void	*ft_memmove(void *dst, const void *src, size_t len)
+// {
+// 	unsigned char		*c_dst;
+// 	const unsigned char	*c_src;
+// 	char				sign;
+// 	size_t				cur;
 
-	c_src = (const unsigned char *)src;
-	c_dst = (unsigned char *)dst;
-	sign = (dst < src) * 2 - 1;
-	cur = (sign == -1) * len;
-	while (cur != (sign == 1) * len && (dst || src))
+// 	c_src = (const unsigned char *)src;
+// 	c_dst = (unsigned char *)dst;
+// 	sign = (dst < src) * 2 - 1;
+// 	cur = (sign == -1) * len;
+// 	while (cur != (sign == 1) * len && (dst || src))
+// 	{
+// 		c_dst[cur - (sign == -1)] = c_src[cur - (sign == -1)];
+// 		cur += sign;
+// 	}
+// 	return (dst);
+// }
+
+void	*ft_memmove(void *dest, const void *src, size_t n)
+{
+	void	*ans;
+	size_t	i;
+
+	if (n == 0 || dest == src)
+		return (dest);
+	ans = dest;
+	if (src < dest)
 	{
-		c_dst[cur - (sign == -1)] = c_src[cur - (sign == -1)];
-		cur += sign;
+		while (n--)
+			((unsigned char *)dest)[n] = ((unsigned char *)src)[n];
 	}
-	return (dst);
+	else
+	{
+		while (i < n)
+		{
+			((unsigned char *)dest)[i] = ((unsigned char *)src)[i];
+			i++;
+		}
+	}
+	return (ans);
 }
 
-static char	*ft_strjoin(char *s1, char *s2)
+char	*ft_strjoin(char const *s1, char const *s2)
 {
 	char	*str;
 	size_t	s1_len;
@@ -69,9 +93,11 @@ static char	*ft_strjoin(char *s1, char *s2)
 
 	if (!s1 || !s2)
 		return (NULL);
+	s1_len = ft_strlen(s1);
+	s2_len = ft_strlen(s2);
 	if (s1_len >= SIZE_MAX - s2_len - 1)
 		return (NULL);
-	str = (char *)malloc(sizeof(*s1) * (s1_len + s2_len + 1));
+	str = (char *)malloc(sizeof(char) * (s1_len + s2_len + 1));
 	ft_memmove(str, s1, s1_len);
 	ft_memmove(str + s1_len, s2, s2_len);
 	str[s1_len + s2_len] = '\0';
@@ -96,5 +122,25 @@ char	*ft_substr(char const *s, unsigned int start, size_t len)
 	if (!new)
 		return (NULL);
 	ft_memmove(new, s + start, finish + 1);
+	new[finish] = '\0';
 	return (new);
+}
+
+size_t	ft_strlcpy(char *dst, const char *src, size_t dstsize)
+{
+	size_t	i;
+	size_t	src_len;
+
+	i = 0;
+	src_len = ft_strlen(src);
+	if (dstsize != 0)
+	{
+		while (src [i] != '\0' && i < (dstsize - 1))
+		{
+			dst[i] = src[i];
+			i++;
+		}
+		dst[i] = '\0';
+	}
+	return (src_len);
 }
